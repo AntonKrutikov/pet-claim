@@ -207,7 +207,7 @@ class PageUploadInvoice extends HTMLElement {
             if (this.fileInput.files && this.fileInput.files.length > 0) {
                 reader.readAsDataURL(this.fileInput.files[0])
             }
-            this.fileInput.files = null
+            this.fileInput.value = null
         })
 
         this.skip = this.querySelector('.button-skip')
