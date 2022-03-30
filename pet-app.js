@@ -577,6 +577,7 @@ class PetApp extends HTMLElement {
             speed: 1,
             loop: true,
             autoplay:true})
+        this.backButton.style.display = 'none'
         this.content.replaceChildren(loader)
         setTimeout(() => window.location.hash = '#submitted', 2000)
     }
