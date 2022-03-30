@@ -430,6 +430,7 @@ class PetApp extends HTMLElement {
         </header>
         <section></section>
         `
+        this.header = this.querySelector('header')
         this.content = this.querySelector('section')
         this.avatar = this.querySelector('.avatar')
         this.backButton = this.querySelector('.nav-back')
@@ -577,9 +578,15 @@ class PetApp extends HTMLElement {
             speed: 1,
             loop: true,
             autoplay:true})
-        this.backButton.style.display = 'none'
+
+        // Hide header (back, progress) and replace content
+        this.header.style.display = 'none'
         this.content.replaceChildren(loader)
-        setTimeout(() => window.location.hash = '#submitted', 2000)
+
+        setTimeout(() => {
+            this.header.style.display = null //return header back and navigate to state after
+            window.location.hash = '#submitted'
+        }, 2000)
     }
 }
 
