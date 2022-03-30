@@ -569,9 +569,16 @@ class PetApp extends HTMLElement {
     }
 
     async submit() {
-        console.log(this.state)
         //TODO: submit json to server or create form instance and submit
-        window.location.hash = '#submitted'
+        console.log(this.state)
+        const loader = createElement('lottie-player', ['tail-wagging-dog'], null, {
+            src: 'img/blueball.json',
+            background: 'transparent',
+            speed: 1,
+            loop: true,
+            autoplay:true})
+        this.content.replaceChildren(loader)
+        setTimeout(() => window.location.hash = '#submitted', 2000)
     }
 }
 
