@@ -237,6 +237,7 @@ page-invoice .preview__photo-wrpapper {
     height: max-content;
     padding: 10px;
     background-color: #fff;
+    overflow: hidden;
 }
 page-invoice .preview__photo-wrpapper > img {
     width: 100%;
@@ -258,6 +259,20 @@ page-invoice .preview__remove {
     transform: rotate(45deg);
     border: 1px solid #eee;
     box-shadow: 1px 0 2px #eee;
+}
+page-invoice .preview__text {
+    position: absolute;
+    bottom: 0;
+    left: 10px;
+    right: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+    /* font-size: 0.9em; */
+    color: #888;
+    background-color: #fff;
+    /* font-weight: bold; */
 }
 image-cropper {
     flex: 1;

@@ -34,7 +34,7 @@ class PagePet extends HTMLElement {
         this.radioList.replaceChildren()
         for (const pet of list) {
             const item = createElement('div', ['pet-select-item'])
-            const radio = createElement('input', ['pet-select-item__radio'], null, {type: 'radio', name: 'pet', value: pet.name}) 
+            const radio = createElement('input', ['pet-select-item__radio'], null, { type: 'radio', name: 'pet', value: pet.name })
             const avatar = createElement('div', ['pet-select-item__avatar'])
             const name = createElement('div', ['pet-select-item__name'], pet.name)
 
@@ -149,7 +149,7 @@ class PageDetails extends HTMLElement {
         })
     }
 
-    updateViewState(){
+    updateViewState() {
         if (this.textarea.value.length > 0) {
             this.placeholderUp.style.display = 'block'
             this.continueButton.disabled = false
@@ -165,6 +165,16 @@ class PageInvoice extends HTMLElement {
     constructor() {
         super()
         this.photos = []
+        this.imageExtension = ['png', 'jpg', 'jpeg', 'tiff', 'tif']
+        this.fileIcons = {
+            'pdf': '/assets/pdf.png',
+            'eml': '/assets/eml.png',
+            'oft': '/assetes/document.png',
+            'msg': '/assets/document.png',
+            'html': '/assets/html.png',
+            'docx': '/assets/docx.png'
+        }
+        this.maxFileUploadSize = 25 * 1024 * 1024
 
         this.text = {
             header: {
@@ -172,18 +182,18 @@ class PageInvoice extends HTMLElement {
                 photoState: `How's the invoice looking?`
             },
             subHeader: {
-                emptyState: `The more information we have, the faster we can process the claim. <br> Upload multiple files if needed.`,
-                photoState: `Add another photo, if needed.`
+                emptyState: `The more information we have, the faster we can process the claim. <br> Upload multiple files if needed. <br> max file size 25Mb`,
+                photoState: `Add another file, if needed.`
             }
         }
 
         this.header = createElement('header', ['page-header'], this.text.header.emptyState)
         this.subHeader = createElement('header', ['page-subheader'], this.text.subHeader.emptyState)
         this.previewContainer = createElement('div', ['preview-container'])
-        this.fileInput = createElement('input', [], null, {type: 'file', accept: 'image/*'})
+        this.fileInput = createElement('input', [], null, { type: 'file', accept: '.pdf, .png, .jpg, .jpeg, .tiff, .tif, .eml, .oft, .msg, .html, .docx', multiple: true })
         this.uploadButton = createElement('button', ['button-continue'], `Upload`)
         this.skipButton = createElement('button', ['button-skip'], `I Don't Have One`)
-        this.usePhotoButton = createElement('button', ['button-continue'], `Use This Photos`)
+        this.usePhotoButton = createElement('button', ['button-continue'], `Use This Files`)
         this.uploadAnotherButton = createElement('button', ['button-continue', 'invert'], `Upload Another`)
         this.tryAgainButton = createElement('button', ['button-skip'], `Try Again`)
         this.imageCropper = new ImageCropper()
@@ -212,30 +222,54 @@ class PageInvoice extends HTMLElement {
         })
 
         // Call cropper for each new file
-        this.fileInput.addEventListener('change', e => {
-            const reader = new FileReader()
-            reader.onload = e => {
-                this.imageCropper.setPhoto(e.target.result)
-                this.updatePreviewState('cropper')
+        this.tasks = []
+        this.fileInput.addEventListener('change', async e => {
+            // Create task for each img in upload
+            for (const file of this.fileInput.files) {
+                if (file.size >= this.maxFileUploadSize) continue
+
+                const task = () => {
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader()
+                        reader.onload = e => {
+                            resolve({ file: e.target.result, name: file.name })
+                        }
+                        reader.readAsDataURL(file)
+                    })
+                }
+                this.tasks.push(task)
             }
-            if (this.fileInput.files?.length > 0) reader.readAsDataURL(this.fileInput.files[0])
+
+            // Execute crop tasks 1 by 1 only for images
+            // For other files just add
+            for (const task of this.tasks) {
+                const { file, name } = await task()
+                const ext = name.split('.').slice(-1)[0]
+
+                if (this.imageExtension.includes(ext)) {
+                    const cropperTask = async () => {
+                        return new Promise((resolve, reject) => {
+                            this.imageCropper.setPhoto(file, resolve)
+                            this.updatePreviewState('cropper')
+                        })
+                    }
+                    const result = await cropperTask()
+                    if (result) {
+                        const preview = this.createPreview(result)
+                        this.previewContainer.appendChild(preview)
+                        this.photos.push(result)
+                        this.dispatchEvent(new CustomEvent('photoschange', { detail: this.photos }))
+                    }
+                } else {
+                    const preview = this.createPreview(file, this.fileIcons[ext], name)
+                    this.previewContainer.appendChild(preview)
+                    this.photos.push(file)
+                    this.dispatchEvent(new CustomEvent('photoschange', { detail: this.photos }))
+                }
+            }
             this.fileInput.value = null
-        })
-
-        // Cropper events
-        this.imageCropper.addEventListener('cancel', e => {
-            this.updatePreviewState(this.photos.length > 0 ? 'photos' : 'empty')
-        })
-
-        this.imageCropper.addEventListener('continue', async e => {
-            const data = await this.imageCropper.getResultBase64()
-            const preview = this.createPreview(data)
-
-            this.previewContainer.appendChild(preview)
-            this.photos.push(data)
-            this.dispatchEvent(new CustomEvent('photoschange', {detail: this.photos}))
-            
-            this.updatePreviewState('photos')
+            this.tasks = []
+            this.updatePreviewState( this.photos.length > 0 ? 'photos' : 'empty')
         })
 
         // Buttons events
@@ -247,7 +281,7 @@ class PageInvoice extends HTMLElement {
         })
         this.tryAgainButton.addEventListener('click', e => {
             this.photos = []
-            this.dispatchEvent(new CustomEvent('photoschange', {detail: this.photos}))
+            this.dispatchEvent(new CustomEvent('photoschange', { detail: this.photos }))
             this.previewContainer.replaceChildren()
             this.updatePreviewState('empty')
         })
@@ -266,19 +300,23 @@ class PageInvoice extends HTMLElement {
         this.previewState[state].forEach(el => el.show())
     }
 
-    createPreview(data) {
+    createPreview(data, ico, text) {
         const wrapper = createElement('div', ['preview__photo-wrpapper'])
         const img = createElement('img')
         const removeButton = createElement('div', ['preview__remove'], '+')
-        img.src = data
+        img.src = ico ?? data
         wrapper.appendChild(img)
         wrapper.appendChild(removeButton)
+        if (text) {
+            const name = createElement('div', ['preview__text'], text)
+            wrapper.append(name)
+        }
 
         removeButton.addEventListener('click', e => {
             wrapper.remove()
             this.photos = this.photos.filter(p => p !== data)
             this.updatePreviewState(this.photos.length > 0 ? 'photos' : 'empty')
-            this.dispatchEvent(new CustomEvent('photoschange', {detail: this.photos}))
+            this.dispatchEvent(new CustomEvent('photoschange', { detail: this.photos }))
         })
         return wrapper
     }
@@ -292,11 +330,13 @@ class ImageCropper extends HTMLElement {
         <div class="croppie-wrapper"></div>
         <div class="buttons-wrapper">
             <button class="button-cancel">Cancel</button>
+            <button class="button-skip">Skip cropping</button>
             <button class="button-continue">Continue</button>
         </div>
         `
         this.wrapper = this.querySelector('.croppie-wrapper')
         this.cancelButton = this.querySelector('.button-cancel')
+        this.skipButton = this.querySelector('.button-skip')
         this.continueButton = this.querySelector('.button-continue')
 
         this.croppie = new Croppie(this.wrapper, {
@@ -305,17 +345,23 @@ class ImageCropper extends HTMLElement {
         })
 
         this.cancelButton.addEventListener('click', e => {
-            this.dispatchEvent(new CustomEvent('cancel'))
+            if (this.resolve) this.resolve(null)
+        })
+
+        this.skipButton.addEventListener('click', e => {
+            if (this.resolve) this.resolve(this.originalImg)
         })
 
         this.continueButton.addEventListener('click', e => {
-            this.dispatchEvent(new CustomEvent('continue'))
+            if (this.resolve) this.resolve(this.croppie.result({ type: 'base64', size: 'original' }))
         })
 
         this.hide()
     }
 
-    setPhoto(img) {
+    setPhoto(img, resolve) {
+        this.originalImg = img
+        this.resolve = resolve
         this.croppie.bind({
             url: img,
             zoom: 0
@@ -545,7 +591,7 @@ class PetApp extends HTMLElement {
     async getPets() {
         //TODO: load pets from API
         const petList = [
-            { name: 'Coco', avatar: '/assets/dog1.jpeg'},
+            { name: 'Coco', avatar: '/assets/dog1.jpeg' },
             { name: 'Lucky', avatar: '/assets/dog2.webp' }
         ]
         return petList
@@ -577,7 +623,8 @@ class PetApp extends HTMLElement {
             background: 'transparent',
             speed: 1,
             loop: true,
-            autoplay:true})
+            autoplay: true
+        })
 
         // Hide header (back, progress) and replace content
         this.header.style.display = 'none'
@@ -591,3 +638,6 @@ class PetApp extends HTMLElement {
 }
 
 customElements.define('pet-app', PetApp)
+
+// const app = document.querySelector('pet-app')
+// setTimeout(() => app.navigateTo('#invoice'), 10)
