@@ -165,7 +165,8 @@ class PageInvoice extends HTMLElement {
     constructor() {
         super()
         this.photos = []
-        this.imageExtension = ['png', 'jpg', 'jpeg', 'tiff', 'tif']
+        this.imageExtension = ['png', 'jpg', 'jpeg', 'tiff', 'tif', 'svg']
+        this.supportedFileExtensions = ['pdf', 'png', 'jpg', 'jpeg', 'tiff', 'tif', 'svg', 'eml', 'oft', 'msg', 'docx']
         this.fileIcons = {
             'pdf': '/assets/pdf.png',
             'eml': '/assets/eml.png',
@@ -190,7 +191,7 @@ class PageInvoice extends HTMLElement {
         this.header = createElement('header', ['page-header'], this.text.header.emptyState)
         this.subHeader = createElement('header', ['page-subheader'], this.text.subHeader.emptyState)
         this.previewContainer = createElement('div', ['preview-container'])
-        this.fileInput = createElement('input', [], null, { type: 'file', accept: '.pdf, .png, .jpg, .jpeg, .tiff, .tif, .eml, .oft, .msg, .html, .docx', multiple: true })
+        this.fileInput = createElement('input', [], null, { type: 'file', accept: this.supportedFileExtensions.map(e => `.${e}`).join(','), multiple: true })
         this.uploadButton = createElement('button', ['button-continue'], `Upload`)
         this.skipButton = createElement('button', ['button-skip'], `I Don't Have One`)
         this.usePhotoButton = createElement('button', ['button-continue'], `Use This Files`)
@@ -224,9 +225,12 @@ class PageInvoice extends HTMLElement {
         // Call cropper for each new file
         this.tasks = []
         this.fileInput.addEventListener('change', async e => {
-            // Create task for each img in upload
+            // Create task for file in upload
             for (const file of this.fileInput.files) {
                 if (file.size >= this.maxFileUploadSize) continue
+                //skip unsoported types by extension
+                const ext = file.name.split('.').slice(-1)[0]
+                if (!this.supportedFileExtensions.includes(ext)) continue
 
                 const task = () => {
                     return new Promise((resolve, reject) => {
