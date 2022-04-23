@@ -274,6 +274,47 @@ page-invoice .preview__text {
     background-color: #fff;
     /* font-weight: bold; */
 }
+page-invoice .error {
+    box-sizing: border-box;
+    background: #fde4e8;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    display: flex; 
+    flex-direction: row;
+    margin: 4px 4px 8px 4px;
+    padding: 4px;
+  }
+page-invoice .error-wrapper {
+    display: flex;
+    flex-direction: column;
+}
+page-invoice .error-title {
+    /* text-align: center; */
+    font-weight: bold;
+}
+page-invoice .error-row {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+}
+page-invoice .error-filename {
+    max-width: 75%;
+    overflow: hidden;
+    text-overflow: ellipsis; 
+    white-space: nowrap;
+}
+page-invoice .error-icon {
+    /* background-color: #000; */
+    color: red;
+    height: 24px;
+    line-height: 24px;
+    aspect-ratio: 1/1;
+    border-radius: 50%;
+    border: 2px solid red;
+    margin: 8px;
+    text-align: center;
+    font-weight: bold;
+}
 image-cropper {
     flex: 1;
     display: flex;

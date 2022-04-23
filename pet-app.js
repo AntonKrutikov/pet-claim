@@ -190,6 +190,15 @@ class PageInvoice extends HTMLElement {
 
         this.header = createElement('header', ['page-header'], this.text.header.emptyState)
         this.subHeader = createElement('header', ['page-subheader'], this.text.subHeader.emptyState)
+        this.error = createElement('div', ['error'])
+        this.error.innerHTML = `
+        <div class="error-icon">i</div>
+        <div class="error-wrapper">
+            <div class="error-title"></div>
+            <div class="error-rows-wrapper"></div>
+        </div>
+        `
+        this.error.style.display = 'none'
         this.previewContainer = createElement('div', ['preview-container'])
         this.fileInput = createElement('input', [], null, { type: 'file', accept: this.supportedFileExtensions.map(e => `.${e}`).join(','), multiple: true })
         this.uploadButton = createElement('button', ['button-continue'], `Upload`)
@@ -211,7 +220,7 @@ class PageInvoice extends HTMLElement {
         }
         this.currentPreviewState = 'empty'
 
-        this.append(this.header, this.subHeader, this.previewContainer, this.fileInput, this.uploadButton, this.skipButton, this.imageCropper, this.usePhotoButton, this.uploadAnotherButton, this.tryAgainButton)
+        this.append(this.header, this.subHeader, this.error, this.previewContainer, this.fileInput, this.uploadButton, this.skipButton, this.imageCropper, this.usePhotoButton, this.uploadAnotherButton, this.tryAgainButton)
         this.classList.add('page-content')
 
         // Trigger file select
@@ -225,9 +234,16 @@ class PageInvoice extends HTMLElement {
         // Call cropper for each new file
         this.tasks = []
         this.fileInput.addEventListener('change', async e => {
+            // Hide error block
+            let tooBigFiles = []
+            this.error.querySelector('.error-rows-wrapper').replaceChildren()
+            this.error.style.display = 'none'
             // Create task for file in upload
             for (const file of this.fileInput.files) {
-                if (file.size >= this.maxFileUploadSize) continue
+                if (file.size >= this.maxFileUploadSize) {
+                    tooBigFiles.push(file)
+                    continue
+                }
                 //skip unsoported types by extension
                 const ext = file.name.split('.').slice(-1)[0]
                 if (!this.supportedFileExtensions.includes(ext)) continue
@@ -242,6 +258,21 @@ class PageInvoice extends HTMLElement {
                     })
                 }
                 this.tasks.push(task)
+            }
+
+            // Show error for exceeded files
+            if (tooBigFiles.length > 0) {
+                this.error.querySelector('.error-title').innerText = 'Some files exceeds max upload size:'
+                for (const f of tooBigFiles) {
+                    let row = document.createElement('div')
+                    row.classList.add('error-row')
+                    row.innerHTML = `
+                        <span class="error-filename">${f.name}</span>&nbsp;
+                        <span>${(f.size / 1024 /1024).toFixed(0)} MB</span>
+                    `
+                    this.error.querySelector('.error-rows-wrapper').appendChild(row)
+                }
+                this.error.style.display = null
             }
 
             // Execute crop tasks 1 by 1 only for images
@@ -279,15 +310,18 @@ class PageInvoice extends HTMLElement {
         // Buttons events
         this.skipButton.addEventListener('click', e => {
             this.dispatchEvent(new CustomEvent('continue'))
+            this.error.style.display = 'none'
         })
         this.usePhotoButton.addEventListener('click', e => {
             this.dispatchEvent(new CustomEvent('continue'))
+            this.error.style.display = 'none'
         })
         this.tryAgainButton.addEventListener('click', e => {
             this.photos = []
             this.dispatchEvent(new CustomEvent('photoschange', { detail: this.photos }))
             this.previewContainer.replaceChildren()
             this.updatePreviewState('empty')
+            this.error.style.display = 'none'
         })
     }
 
